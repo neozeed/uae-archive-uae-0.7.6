@@ -1,0 +1,320 @@
+[If the rest of this file is incomprehensible to you, that's because it
+contains german instructions.]
+Für Leute, die englische Texte nicht besonders gut verdauen, sind in dieser
+Datei noch einmal die wichtigsten Hinweise zu UAE zusammengefaßt. Die
+englische README-Datei enthält wesentlich mehr Information; diese deutsche
+Übersetzung ist nur eine Notlösung.
+
+UAE steht für Un*x Amiga Emulator, was den Kern der Sache nicht ganz trifft,
+da auch Versionen für Mac, DOS, NextStep, BeBox und Amiga verfügbar sind.
+
+[Anmerkung: Manche Versionen von UAE, etwa die DOS- und die Mac-Version haben
+zusätzliche Readme-Dateien, die Sie ebenfalls lesen sollten, da manche Details
+von der Unix-Version abweichen.]
+
+Lizenz
+======
+
+UAE unterliegt der GNU General Public License, die in der Datei "COPYING"
+im Hauptverzeichnis dieses Archivs enthalten ist.
+
+
+Übersicht
+=========
+
+UAE emuliert einen A500 mit bis zu 2MB Chipram und 8.5MB Fast-RAM. Die
+Emulation ist nahezu vollständig. Ursprünglich wurde UAE für Unix-ähnliche
+Systeme (ich selbst benutze Linux) geschrieben, hauptsächlich deswegen, weil
+Programmieren unter anderen Betriebssystemen Strafarbeit ist (Fehler=>Absturz).
+Die Hard-/Softwarevoraussetzungen für den Betrieb der Unix-Version sind:
+  - 8MB RAM, besser 12-16MB
+  - ein schneller Prozessor (i486 ist nicht das Gelbe vom Brot)
+  - X11, oder SVGAlib unter Linux
+  - ein ANSI-C-Compiler, am besten GCC.
+  - optional: Die gtk+-Bibliothek, Version 0.99.3 oder höher
+
+
+Vorbereitungen
+==============
+
+Zugriffe auf das Diskettenlaufwerk können nur über einen Umweg emuliert 
+werden, da PCs keine Amiga-Disketten lesen können. UAE verwendet 
+"Diskfiles", das sind genaue Abbilder des Inhalts einer Amiga-Diskette. Solche
+Diskfiles sind 901120 Bytes groß und können mit dem Tool "transdisk", das UAE 
+beiliegt erstellt werden. Um UAE laufenzulassen, benötigen Sie außerdem ein 
+Abbild eines Amiga-Kickstart-ROMs. Dieses kann aus Copyrightgründen nicht mit 
+UAE vertrieben werden. Es muß mit dem Tool "transrom" erzeugt werden.
+Die beiden Programme finden Sie im Unterverzeichnis "amiga". Sie müssen sie
+zunächst auf Ihren Amiga kopieren, entweder über ein serielles Nullmodem-Kabel
+oder mit Hilfe eines Amiga-Programms wie etwa CrossDOS oder MessyDOS, die es
+ermöglichen, PC-Disks mit einem Amiga zu lesen und zu beschreiben. Dieselbe
+Methode kann dann selbstverständlich auch benutzt werden, um Amiga-Dateien auf
+den PC zu kopieren. CrossDOS ist seit einiger Zeit Bestandteil des
+Amiga-Betriebssystems, und MessyDOS ist frei erhältlich (u.a. auf einer 
+älteren Fish-Disk, Nummer habe ich vergessen). Beachten Sie, daß in vielen
+Amigas nur DD-Laufwerke eingebaut sind, die PC-üblichen HD-Disketten lassen
+sich damit nicht verarbeiten.
+Wenn Sie die Lösung mit dem Nullmodemkabel benutzen wollen, werden Sie zwei
+Terminalprogramme benötigen, sowohl für den PC als auch für den Amiga.
+Bitte lesen Sie in den jeweiligen Anleitungen der Programme (etwa CrossDOS 
+oder die Terminalprogramme) nach, wie diese Programme zu bedienen sind.
+Nachdem Sie transrom und transdisk auf den Amiga kopiert haben, müssen Sie dem
+AmigaOS beibringen, daß diese Dateien ausführbare Programme sind. Das
+geschieht durch den CLI-Befehl
+
+  "protect transrom rwed" (bzw. "protect transdisk rwed")
+
+Danach können Sie die Programme aufrufen:
+
+  transrom >RAM:kick.rom
+  
+erzeugt eine 524288 Byte große Kickstart-Datei in der Ramdisk. Diese müssen
+Sie auf Ihren PC übertragen und dort in dasselbe Verzeichnis kopieren, in dem
+UAE installiert ist.
+Mit 
+  transdisk >RAM:df0.adf
+  
+kann die in Laufwerk 0 liegende Diskette in ein Diskettenabbild umgewandelt
+werden, welches wiederum in der Ramdisk gespeichert wird. Hierbei kann ein
+Problem auftreten, wenn Ihr Amiga wenig Speicher hat (wenn er _sehr_ wenig
+Speicher hat, funktioniert schon der obige transrom-Befehl nicht; dann haben
+Sie leider Pech gehabt). Sie können die Diskette in mehreren Stücken
+übertragen. Eine Amiga-Diskette hat 80 Spuren (0..79); mit den Befehlen
+ 
+  transdisk >ram:df0_1.adf -s 0 -e 19
+  transdisk >ram:df0_2.adf -s 20 -e 39
+  transdisk >ram:df0_3.adf -s 40 -e 59
+  transdisk >ram:df0_4.adf -s 60 -e 79
+
+werden vier Teil-Disketten-Abbilder erstellt, (z.B. enthält df0_1.adf gerade
+die Spuren 0 bis 19). Es macht natürlich keinen Sinn, die Befehle in obiger
+Reihenfolge aufzurufen, Sie sollten immer nur jeweils eine Datei erzeugen, auf
+den PC übertragen, aus der Amiga-Ramdisk löschen und dann fortfahren.
+Die vier Dateien lassen sich dann auf dem PC wieder zu einer zusammensetzen,
+entweder unter DOS mit
+
+  COPY /B df0_1.adf+df0_2.adf+df0_3.adf+df0_4.adf df0.adf
+
+oder unter Unix:
+
+  cat df0_1.adf df0_2.adf df0_3.adf df0_4.adf >df0.adf
+
+UAE benötigt die Datei "kick.rom" (524288 Byte) und eine Datei "df0.adf"
+(901120 Byte), um etwas Sinnvolles zu tun. Diese müssen im gleichen
+Verzeichnis stehen, wie UAE.
+Die Datei, die das Kickstartabbild enthält, dürfen Sie nicht weitergeben, da
+sie Code enthält, dessen Copyright Commodore-Amiga hält. Ebenso dürfen die
+meisten Diskettenabbilder (etwa die Workbench, oder kommerzielle Spiele) nicht
+weiterverbreitet werden. Sie dürfen mit UAE nur Software benutzen, für die Sie
+das Nutzungsrecht haben.
+
+
+Compilierung
+============
+
+Die Versionen für Unix, NextStep und BeBox müssen zunächst compiliert werden.
+Für die BeBox müssen Sie dafür ins Verzeichnis "src" gehen und
+
+  make -f Makefile.Be
+  
+eingeben, auf anderen Systemen müssen Sie zunächst
+
+  configure
+
+aufrufen; dieses Skript analysiert Ihr System und sammelt Informationen (aber
+im Gegensatz zu MessySoft-Produkten schickt es sie nicht übers Netz an andere
+Leute, sondern erstellt nur die Dateien "Makefile" und "sysconfig.h"). Danach
+können Sie mit
+
+  make
+  
+UAE compilieren. Am Ende sollte eine ausführbare Datei namens "uae" entstanden
+sein. Falls Sie unter Linux die SVGAlib- anstelle der X11-Version benutzen
+möchten, geben Sie statt "configure" "configure --with-svgalib" ein.
+Sie müssen root sein, um die SVGA-Version starten zu können. Machen Sie UAE
+besser nicht suid root, wenn Ihnen an der Sicherheit des Systems gelegen ist,
+oder Sie könnten böse Überraschungen erleben.
+
+
+Kommandozeilen-Optionen
+=======================
+
+Die folgenden Paramter können Sie UAE in der Kommandozeile übergeben. Sie 
+können häufig benötigte Optionen auch in eine Datei namens "~/.uaerc" (Unix)
+oder "uae.rc" (andere) schreiben, diese Datei wird von UAE beim Start
+gelesen (und wahlweise am Ende geschrieben).
+
+Allgemeine Optionen:
+ -h      : Gibt einen Hilfetext aus, der alle Optionen beschreibt.
+ -f rate : Bildaufbau-Frequenz einstellen. Je höher "rate" ist, desto
+           schneller wird UAE, aber der Bildaufbau ist nicht mehr flüssig,
+	   sondern abgehackt. Standard ist "-f 1", für manche Programme
+	   könnte "-f 3" empfehlenswert sein.
+ -a      : Keine Erweiterungs"hardware" einbinden. Diese Option schaltet
+           die Harddisk- und Fastmem-Emulation aus, ist aber möglicherweise
+	   für einige Programme nötig.
+ -l lang : Tastatur-Sprache auswählen. Für deutsche Tastaturen: "-l de"
+ -0 file : "file" wird anstelle von "df0.adf" benutzt, um Laufwerk 0 zu
+           emulieren. -1, -2 und -3 funktionieren auch (der Amiga kann bis zu 
+	   4 Floppylaufwerke haben)
+ -r file : "file" wird als Kickstart-ROM-Datei benutzt.
+ -J ab   : Legt fest, wie Gameport 0 (a) und Gameport 1 (b) des Amigas
+           emuliert werden. Für "a" und "b" können die folgenden Werte
+           eingesetzt werden: "0" (Joystick 0), "1" (Joystick 1), "M" (Maus),
+	   "A", "B", "C" (verschiedene Joystickemulationen auf der Tastatur)
+	   "A": Zehnerblock (8/4/6/2/0), "B": Cursortasten/Ctrl,
+	   "C": T/F/H/B/Alt
+ -x      : In der X11-Version von UAE macht diese Option den X-Mauszeiger als
+           Fadenkreuz unsichtbar. In der SVGAlib-Version schaltet sie die 
+	   Benutzung eines linearen Framebuffers ab, was die Emulation
+	   langsamer macht, aber bei Problemen nötig sein könnte.
+ -G      : Stellt alle Benutzeroberflächen ab. Nur der Emulator wird
+           gestartet.
+ -C specs: Gibt an, welche CPU emuliert werden soll. Das erste Zeichen in
+           "specs" muss sein: '0' für 68000, '1' für 68010, '2' für 68020
+	   oder '3' für 68020+68881. Danach kann ein 'c' folgen, für eine
+	   langsamere aber kompatiblere 68000-Emulation, oder ein 'a' für
+	   eine 68020-Emulation mit 24-Bit-Adressraum.
+
+Externe Hardware emulieren (Drucker, serielle Schnittstelle, Harddisk)
+ -M VOLUME:path
+ -m VOLUME:path
+           Hiermit können Sie ein Verzeichnis Ihrer Festplatte vom Amiga aus
+	   nutzen. Wenn Sie "-M sound:/usr/amiga/modules" eingeben, wird auf
+	   der Amiga-Seite eine Festplatte namens "SOUND:" emuliert, deren
+	   Inhalt sich im Unix-Verzeichnis /usr/amiga/modules befindet.
+	   Mit -M wird das Verzeichnis schreibgeschützt gemountet.
+ -p cmd  : Schaltet die Druckeremulation ein. Sie benötigen den
+           Amiga-Postscript-Druckertreiber der Workbench 3.0. Als Parameter
+	   cmd übergeben Sie den Namen des Programms, das zum Drucken
+	   gestartet werden soll ("lpr" für die meisten Unix-Systeme), bzw.
+	   den Namen der parallelen Schnittstelle unter DOS ("PRN").
+ -I dev  : Schaltet die Emulation der seriellen Schnittstelle ein. dev gibt
+           dabei den Devicenamen an (etwa "/dev/ttyS1" unter Linux)
+	   Funktioniert noch nicht zuverlässig.
+
+Sound-Optionen:
+ -S specs: Falls Ihre Version von UAE Sound unterstützt, können Sie hiermit
+           einstellen, wie die Soundemulation arbeiten soll. Die "specs"
+	   bestehen aus mehreren Feldern: "n:stereo:bits:frequenz:min:max"
+	   n = 0: Keine vernünftige Soundemulation. Diese Einstellung könnte
+	          in unwahrscheinlichen Fällen inkompatibel sein.
+	   n = 1: Soundhardware emulieren, aber keinen Sound ausgeben. Diese
+	          Einstellung kann deutlich langsamer sein als n = 0.
+	   n = 2: Soundhardware emulieren und Sound ausgeben. Empfohlen.
+	   n = 3: Soundhardware _exakt_ emulieren. Sie werden keinen 
+	          Unterschied hören, aber die Emulation kann hierdurch stark
+		  ausgebremst werden.
+	   stereo kann entweder 's' oder 'm' sein.
+	   bits ist normalerweise 8 oder 16, wobei 16 Bit höhere Qualität
+	          bedeuten.
+	   frequenz gibt die Ausgabefrequenz an; höhere Werte sind besser.
+	          Üblich sind 22050 oder 44100 Hz.
+	   min und max geben die Größe des Soundpuffers an. Normalerweise
+	          beträgt die Größe 8192 Bytes; auf schnellen Maschinen
+		  können kleinere Werte Sinn machen.
+
+Speicher-Optionen
+ -s n    : n*256K Slow-Memory emulieren (Adresse 0xC00000). Das Zeug, was
+           unten in den A500 reingesteckt wird. Manche Programme brauchen es,
+	   obwohl haufenweise anderer Speicher vorhanden ist.
+ -F n    : n MB Fast-Memory emulieren (Adresse 0x200000). Das Zeug, was beim
+           A500 außer Festplatten in die Seite gesteckt wird.
+ -Z n    : n MB Zorro III-Fast-Memory emulieren. Funktioniert nur in der
+           68020-Emulation, erlaubt aber groessere Speicherbereiche (bis zu
+	   64 MB)
+ -c n    : n*512K Chip-Memory. Sollte man nicht ändern müssen, standardmäßig
+           werden 2MB Chip emuliert.
+
+Debugging-Optionen:
+ -D      : Nicht die Emulation, sondern den eingebauten Debugger starten.
+ -i      : Ungültige Speicherzugriffe anzeigen.
+ -g      : Teile des Betriebssystems emulieren. Dies ist noch nicht sehr
+           stabil und wenig empfehlenswert.
+
+Anzeige-Options:
+ -H mode : Anzahl der Farben, in der UAE den Bildschirm darstellen soll,
+           wählen
+ -O mode : Bildschirmuflösung einstellen (s.u.)
+ -U n    : n MB Grafikkartenspeicher emulieren. Mit dieser Option wird der
+           Support fuer Picasso96-Grafikkarten eingeschaltet. Diese Option
+	   funktioniert nur mit der 68020-Emulation.
+
+Der "mode"-Parameter der Option "-O" wird wie folgt angegeben:
+-O Breite:Höhe:Tuning-Parameter
+wobei Breite und Höhe die Dimensionen des Fensters (oder den Grafikmodus)
+angeben. Die Tuning-Parameter bestehen aus einzelnen Buchstaben, die
+angegeben werden können (aber nicht müssen):
+  l: Schaltet Lores-Darstellung ein, nur jedes zweite horizontale Pixel wird
+     gezeichnet. Sinnvoll für kleine VGA-Auflösungen wie etwa 320x200.
+  x,y,X,Y: Wenn "x" angegeben wird, versucht UAE, das dargestellte Bild an
+     der richtigen Stelle am Bildschirm darzustellen. Dies ist nur nötig,
+     falls die Breite des Fensters weniger als 800 Pixel beträgt (etwa in
+     640er oder 320er-Modi). Ohne "x" wird das Bild normalerweise über den
+     rechten oder linken Bildschirmrand herausragen. "y" tut dasselbe für die
+     vertikale Richtung, es ist nur bei Fenstern nötig, die weniger als 300
+     Pixel hoch sind. Werden Großbuchstaben für diese Optionen verwendet
+     (X oder Y), so versucht UAE, besonders clever zu sein (aber da ich
+     Computern nicht sehr viel Cleverness zutraue, gibt's auch die dummen
+     Varianten).
+  d: Verdoppelt jede Zeile. Dafür sollte das Fenster dann mindestens 600
+     Zeilen hoch sein. Der Vorteil ist, daß Interlace-Screens besser
+     dargestellt werden (aber es läuft auch langsamer).
+  c: Quetscht das Amiga-Bild so, daß es mit den gewählten Dimensionen des
+     Fensters so gut wie möglich übereinstimmt.
+     
+Beispiel: "-O 320:200:lXYc" ist der kleinste sinnvolle Modus. Durch das "c"
+werden Amiga-Screens, die 320x256 Pixel groß sind, durch Weglassen einzelner
+Zeilen auf 320x200 gestaucht (ohne "c" werden keine Zeilen zwischendurch
+weggelassen, es fehlt dann einfach der untere Rand des Bildes).
+Die größte sinnvolle Auflösung ist "-O 800:600:d", dazwischen gibt es
+verschiedene sinnvolle Einstellungen, etwa "-O 640:480:X" oder auch 
+"-O 640:480:XYdc". Am besten, Sie experimentieren ein wenig damit.
+
+Farb-Modi:   0 (256 Farben); 1 (32768 Farben); 2 (65536 Farben)
+             3 (256 Farben, allerdings gerastert um die Qualität zu
+	        verbessern (ist etwas langsamer als Modus 0)
+	     4 (16 Farben, gerastert); 5 (16 Millionen Farben)
+
+
+Häufige Probleme
+================
+
+Manche Kickstart-ROM-Versionen (aus neueren A4000 und A1200) sind für den
+68020 compiliert, der von UAE derzeit noch nicht 100% emuliert wird, daher
+laufen diese Kickstarts nicht.
+
+Auf manchen Linux-Systemen ist ein kaputter Linker installiert. Falls Sie
+Fehlermeldungen der Sorte "final link failed: Bad value" beim Compilieren
+kriegen, sollten Sie sich von sunsite.unc.edu:/pub/Linux/GCC eine neuere
+Version der binutils besorgen. Allerdings sollten Sie die Hinweise, die in den
+"release.*"-Dateien stehen, genau beachten.
+
+
+Adresse des Autors
+==================
+
+crux@pool.informatik.rwth-aachen.de
+
+oder mit der gelben Post:
+
+Bernd Schmidt
+Schloßweiherstraße 14
+52072 Aachen
+
+(bitte nicht anrufen, wenn's geht)
+
+Wenn Sie Verständnisprobleme mit diesem Text haben oder Teile der englischen
+Dokumentation nicht verstehen, versuchen Sie bitte, jemand in Ihrer Nähe zu 
+finden, der Ihnen die Dinge erklären/übersetzen kann. Ich kann nicht jedem 
+Computerneuling noch einmal lang und breit erklären, wie man (beispielsweise) 
+CrossDOS bedient: dazu gibt's bei CrossDOS auch eine Dokumentation. Ich
+versuche, zu helfen, aber manche Dinge sind zu zeitaufwendig.
+
+Bevor Sie eine Frage stellen, überprüfen Sie bitte, ob sie nicht in der
+Dokumentation bereits beantwortet wird.
+Ich verschicke keine Kickstart-ROM-Dateien oder Amiga-Spiele. Schicken Sie
+mir bitte auch keine Raubkopien, ich lösche so etwas sofort. Generell gilt
+auch, daß Sie keine Dateien, die größer als 50KB sind, per email verschicken
+sollten. Wenn ich 3MB Screenshots oder ähnliches Zeug per email kriege, freue
+ich mich nicht darüber.

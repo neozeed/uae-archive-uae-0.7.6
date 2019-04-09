@@ -1,0 +1,176 @@
+#
+# Makefile.in for UAE
+#
+
+@SET_MAKE@
+CC        = @CC@
+CPP       = @CPP@
+LDFLAGS   = @LDFLAGS@
+CFLAGS    = @CFLAGS@ -D__inline__=@ac_cv_c_inline@ $(AFINCLUDE) \
+            -DSTATFS_NO_ARGS=@STATFS_NO_ARGS@ \
+            -DSTATBUF_BAVAIL=@STATBUF_BAVAIL@ 
+X_CFLAGS  = @X_CFLAGS@ @GTK_CFLAGS@ -DSHM_SUPPORT_LINKS=@SHM_SUPPORT_LINKS@
+TARGET    = @TARGET@
+LIBRARIES = @LIBRARIES@ @LIBS@ @GTK_LIBS@
+MATHLIB   = @MATHLIB@
+
+NO_SCHED_CFLAGS = @NO_SCHED_CFLAGS@
+
+INSTALL         = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA    = @INSTALL_DATA@
+prefix          = @prefix@
+exec_prefix     = @exec_prefix@
+bindir          = @bindir@
+libdir          = @libdir@
+sysconfdir      = @sysconfdir@
+
+VPATH = @top_srcdir@/src
+
+.SUFFIXES: .o .c .h .m .i .S
+
+.SECONDARY: p2c.c p2c.h cpuemu.c cpustbl.c cputbl.h
+
+# If you want to use the AF System to play sound, set theese to the
+# correct paths. If not, leave them commented out.
+# (Don't forget to define AF_SOUND in config.h)
+#AFINCLUDE=-I/usr/local/vol/AudioFile/include
+#AFLDFLAGS=-L/usr/local/vol/AudioFile/lib -lAF
+
+INCLUDES=-I. -I@top_srcdir@/src/include/
+
+OBJS = main.o newcpu.o memory.o @CPUOBJS@ custom.o cia.o serial.o blitter.o \
+       autoconf.o ersatz.o filesys.o hardfile.o keybuf.o expansion.o zfile.o \
+       fpp.o readcpu.o cpudefs.o gfxutil.o gfxlib.o blitfunc.o blittable.o \
+       disk.o audio.o compiler.o uaelib.o picasso96.o p2c.o cpustbl.o \
+       uaeexe.o missing.o sounddep/sound.o osdep/joystick.o machdep/support.o \
+       @ASMOBJS@ @GFXOBJS@ @DEBUGOBJS@
+
+all: $(TARGET)
+
+x11: progs
+
+svgalib: progs
+
+ggilib: progs
+
+asciiart: progs
+
+amigaos: progs
+
+p_os: progs
+
+beos: progs
+
+next: progs
+	cp uae ../Uae.app/Uae
+
+progs: uae readdisk
+
+install:
+
+readdisk: readdisk.o missing.o
+	$(CC) readdisk.o missing.o -o readdisk $(LDFLAGS) $(DEBUGFLAGS)
+
+uae: $(OBJS)
+	$(CC) $(OBJS) -o uae $(GFXLDFLAGS) $(AFLDFLAGS) $(LDFLAGS) $(DEBUGFLAGS) $(LIBRARIES) $(MATHLIB)
+
+clean:
+	-rm -f $(OBJS) *.o uae readdisk
+	-rm -f gencpu genblitter blit.h genp2c cpudefs.c cpuopti
+	-rm -f cpuemu.c build68k cputmp.s cpufast.s cpustbl.c cputbl.h
+	-rm -f blitfunc.c blitfunc.h blittable.c p2c.c p2c.h
+
+halfclean:
+	-rm -f $(OBJS)
+
+streifenfrei: clean
+	-rm -f Makefile config.cache config.log config.status sysconfig.h
+	-rm -f machdep osdep threaddep sounddep target.h config.h
+
+blit.h: genblitter
+	./genblitter i >blit.h
+blitfunc.c: genblitter blitfunc.h
+	./genblitter f >blitfunc.c
+blitfunc.h: genblitter
+	./genblitter h >blitfunc.h
+blittable.c: genblitter blitfunc.h
+	./genblitter t >blittable.c
+
+genblitter: genblitter.o blitops.o
+	$(CC) $(LDFLAGS) -o genblitter genblitter.o blitops.o
+build68k: build68k.o
+	$(CC) $(LDFLAGS) -o build68k build68k.o
+cpuopti: cpuopti.o
+	$(CC) $(LDFLAGS) -o cpuopti cpuopti.o
+gencpu: gencpu.o readcpu.o cpudefs.o missing.o
+	$(CC) $(LDFLAGS) -o gencpu gencpu.o readcpu.o missing.o cpudefs.o
+genp2c: genp2c.o
+	$(CC) $(LDFLAGS) -o genp2c genp2c.o
+
+custom.o: blit.h p2c.h
+p2c.o: p2c.h
+
+p2c.h: genp2c
+	./genp2c H >p2c.h
+p2c.c: genp2c
+	./genp2c C >p2c.c
+p2c_x86.S: genp2c
+	./genp2c x86 >p2c_x86.S
+
+cpudefs.c: build68k @top_srcdir@/src/table68k
+	./build68k <@top_srcdir@/src/table68k >cpudefs.c
+
+cpuemu.c: gencpu
+	./gencpu
+
+# gencpu also creates cpustbl.c and cputbl.h
+cpustbl.c: cpuemu.c
+cputbl.h: cpuemu.c
+
+cpufast.s: cpuemu.c cpuopti
+	$(CC) $(INCLUDES) -S $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) $(NO_SCHED_CFLAGS) $< -o cputmp.s
+	./cpuopti <cputmp.s >$@
+	rm cputmp.s
+	
+osdep/beos.o: osdep/beos.cpp
+	$(CC) $(INCLUDES) -c $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) osdep/beos.cpp -o osdep/beos.o
+
+.m.o:
+	$(CC) $(INCLUDES) -c $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) $<
+.c.o:
+	$(CC) $(INCLUDES) -c $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) $< -o $@
+.c.s:
+	$(CC) $(INCLUDES) -S $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) $< -o $@
+.c.i:
+	$(CC) $(INCLUDES) -E $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) $< > $@
+.S.o:
+	$(CC) $(INCLUDES) -c $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) $< -o $@
+.s.o:
+	$(CC) $(INCLUDES) -c $(INCDIRS) $(CFLAGS) $(X_CFLAGS) $(DEBUGFLAGS) $< -o $@
+
+# Saves recompiling...
+touch:
+	touch *.o; touch build68k; touch cpudefs.c; touch cpudefs.o; touch gencpu; touch cpuemu.c; touch cpuopti.o cpuopti cpuemu.o cpufast.s cpufast.o
+
+build68k.o: include/readcpu.h
+readcpu.o: include/readcpu.h
+
+main.o: config.h
+cia.o: config.h include/events.h
+custom.o: config.h include/events.h blit.h
+newcpu.o: config.h include/events.h
+autoconf.o: config.h
+expansion.o: config.h
+xwin.o: config.h
+svga.o: config.h
+audio.o: config.h include/events.h
+memory.o: config.h
+debug.o: config.h
+fpp.o: config.h
+ersatz.o: config.h
+filesys.o: config.h
+execlib.o: config.h
+disk.o: config.h include/events.h
+blitter.o: config.h include/events.h blit.h
+
